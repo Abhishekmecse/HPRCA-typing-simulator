@@ -1,0 +1,643 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HPRCA JOA (IT) Typing Test Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .correct {
+            color: #22c55e;
+            background-color: rgba(34, 197, 94, 0.15);
+        }
+        .incorrect {
+            color: #ef4444;
+            background-color: rgba(239, 68, 68, 0.25);
+            text-decoration: underline;
+        }
+        .current {
+            background-color: #3b82f6;
+            color: #ffffff;
+            animation: pulse 1.2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+        @media print {
+            body { background: white; color: black; }
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+
+    <header class="bg-slate-900 border-b border-slate-800 px-4 py-3 no-print">
+        <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 p-2 rounded-lg font-bold text-xl text-white">HP</div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight text-slate-100">HPRCA JOA (IT) Typing Test Simulator</h1>
+                    <p class="text-xs text-slate-400">Himachal Pradesh Rajya Chayan Aayog Evaluation Rules</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span id="benchmark-badge" class="px-3 py-1 bg-blue-900/50 text-blue-300 border border-blue-700/50 rounded-full text-xs font-semibold">
+                    Target: 30 WPM (English)
+                </span>
+                <button onclick="openPrintSlip()" id="print-btn-top" class="hidden bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs px-3 py-1.5 rounded border border-slate-700 font-medium">
+                    🖨️ Print Result
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto w-full p-4 md:p-6 flex-1 flex flex-col gap-6 no-print">
+
+        <!-- Controls Dashboard -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 md:p-5 shadow-lg flex flex-wrap gap-4 items-center justify-between">
+            <div class="flex flex-wrap items-center gap-4 text-sm">
+                <!-- Language Selector -->
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Language</label>
+                    <select id="langSelect" onchange="changeLanguage()" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 font-medium focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="en">English (30 WPM Target)</option>
+                        <option value="hi">Hindi (25 WPM Target)</option>
+                    </select>
+                </div>
+
+                <!-- Duration Selector -->
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Test Duration</label>
+                    <select id="durationSelect" onchange="resetTest()" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 font-medium focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="10">10 Minutes (Exam Standard)</option>
+                        <option value="5">5 Minutes (Practice)</option>
+                        <option value="2">2 Minutes (Quick Check)</option>
+                    </select>
+                </div>
+
+                <!-- Backspace Option -->
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Backspace Mode</label>
+                    <select id="backspaceSelect" onchange="resetTest()" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 font-medium focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="disabled">Strictly Disabled (Exam Mode)</option>
+                        <option value="enabled">Allowed (Practice Mode)</option>
+                    </select>
+                </div>
+
+                <!-- Preset Passage Selector -->
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Passage Presets</label>
+                    <select id="passageSelect" onchange="loadPresetPassage()" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 font-medium focus:ring-2 focus:ring-blue-500 outline-none max-w-[200px] truncate">
+                        <option value="0">Passage 1: HP Administration</option>
+                        <option value="1">Passage 2: IT Fundamentals</option>
+                        <option value="2">Passage 3: Digital Governance</option>
+                        <option value="custom">-- Custom Text --</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Action Controls -->
+            <div class="flex items-center gap-3">
+                <button id="soundToggle" onclick="toggleAudio()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300">
+                    🔊 Audio On
+                </button>
+                <button onclick="resetTest()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-lg border border-slate-700 transition">
+                    🔄 Reset
+                </button>
+                <button id="startBtn" onclick="startTestManual()" class="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition shadow-lg shadow-blue-600/30">
+                    ▶ Start Exam
+                </button>
+            </div>
+        </div>
+
+        <!-- Custom Passage Input Container (Hidden by default) -->
+        <div id="customTextContainer" class="hidden bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <label class="block text-xs font-medium text-slate-400 mb-1">Paste Your Custom Test Passage Here:</label>
+            <textarea id="customTextInput" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 text-sm mono outline-none focus:border-blue-500" placeholder="Paste passage text..."></textarea>
+            <button onclick="applyCustomText()" class="mt-2 px-3 py-1.5 bg-blue-600 text-xs font-semibold rounded text-white">Apply Passage</button>
+        </div>
+
+        <!-- Real-time Stats Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 text-center">
+                <span class="text-xs text-slate-400 uppercase font-semibold">Time Remaining</span>
+                <div id="timerDisplay" class="text-2xl font-bold mono text-yellow-400 mt-1">10:00</div>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 text-center">
+                <span class="text-xs text-slate-400 uppercase font-semibold">Strokes Typed</span>
+                <div id="strokeDisplay" class="text-2xl font-bold mono text-blue-400 mt-1">0</div>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 text-center">
+                <span class="text-xs text-slate-400 uppercase font-semibold">Gross WPM</span>
+                <div id="grossWpmDisplay" class="text-2xl font-bold mono text-slate-200 mt-1">0</div>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 text-center">
+                <span class="text-xs text-slate-400 uppercase font-semibold">Live Errors</span>
+                <div id="errorDisplay" class="text-2xl font-bold mono text-red-400 mt-1">0</div>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 text-center col-span-2 md:col-span-1">
+                <span class="text-xs text-slate-400 uppercase font-semibold">Accuracy</span>
+                <div id="accuracyDisplay" class="text-2xl font-bold mono text-emerald-400 mt-1">100%</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1">
+            <!-- Source Passage Box -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col h-[320px]">
+                <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-800">
+                    <span class="text-xs font-bold text-slate-400 uppercase">Question Passage Display</span>
+                    <span id="charCountLabel" class="text-xs text-slate-500 mono">0 / 0 Chars</span>
+                </div>
+                <div id="sourceTextContainer" class="flex-1 overflow-y-auto pr-2 text-lg leading-relaxed mono whitespace-pre-wrap select-none text-slate-300">
+                    <!-- Text rendered via JS -->
+                </div>
+            </div>
+
+            <!-- Typing Input Box -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col h-[320px]">
+                <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-800">
+                    <span class="text-xs font-bold text-slate-400 uppercase">Candidate Typing Box</span>
+                    <span id="typingStatusLabel" class="text-xs text-emerald-400 font-semibold">Ready - Start typing to begin</span>
+                </div>
+                <textarea id="typingInput" disabled placeholder="Click 'Start Exam' or start typing directly to begin..." class="flex-1 bg-slate-950 border border-slate-800 rounded-lg p-3 text-lg leading-relaxed mono text-slate-100 outline-none focus:border-blue-500 resize-none"></textarea>
+            </div>
+        </div>
+
+        <!-- Evaluation Results Slip Section (Appears after completion) -->
+        <div id="resultCard" class="hidden bg-slate-900 border border-slate-700 rounded-xl p-6 shadow-2xl">
+            <div class="flex justify-between items-start border-b border-slate-800 pb-4 mb-6">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-100">Official Evaluation Report</h2>
+                    <p class="text-xs text-slate-400">Calculated strictly using HPSSC / HPRCA Official Typing Test Formula</p>
+                </div>
+                <div id="statusBadge" class="px-4 py-2 rounded-lg text-lg font-bold tracking-wide uppercase">
+                    --
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 text-sm">
+                <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                    <span class="text-xs text-slate-400">Total Key Strokes</span>
+                    <div id="resStrokes" class="text-lg font-bold text-slate-200 mono">0</div>
+                </div>
+                <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                    <span class="text-xs text-slate-400">Gross Words (Strokes/5)</span>
+                    <div id="resGrossWords" class="text-lg font-bold text-slate-200 mono">0</div>
+                </div>
+                <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                    <span class="text-xs text-slate-400">Total Errors</span>
+                    <div id="resErrors" class="text-lg font-bold text-red-400 mono">0</div>
+                </div>
+                <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                    <span class="text-xs text-slate-400">Admissible Errors (5%)</span>
+                    <div id="resAdmissible" class="text-lg font-bold text-blue-400 mono">0</div>
+                </div>
+                <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                    <span class="text-xs text-slate-400">Extra Errors</span>
+                    <div id="resExtraErrors" class="text-lg font-bold text-orange-400 mono">0</div>
+                </div>
+                <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                    <span class="text-xs text-slate-400">Penalty Words (Extra × 2)</span>
+                    <div id="resPenalty" class="text-lg font-bold text-red-400 mono">0</div>
+                </div>
+                <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                    <span class="text-xs text-slate-400">Net Words</span>
+                    <div id="resNetWords" class="text-lg font-bold text-emerald-400 mono">0</div>
+                </div>
+                <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                    <span class="text-xs text-slate-400">Final Net Speed</span>
+                    <div id="resNetWpm" class="text-2xl font-bold text-emerald-400 mono">0 WPM</div>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3">
+                <button onclick="downloadTxtResult()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-sm font-semibold border border-slate-700">
+                    📥 Export TXT Report
+                </button>
+                <button onclick="window.print()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-semibold shadow-lg shadow-blue-600/30">
+                    🖨️ Print Candidate Scorecard
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <div class="hidden print-only p-8 text-black bg-white">
+        <div class="border-b-2 border-black pb-4 mb-4 text-center">
+            <h1 class="text-2xl font-bold uppercase">HPRCA JOA (IT) Typing Test Scorecard</h1>
+            <p class="text-sm">Himachal Pradesh Rajya Chayan Aayog Exam Simulator</p>
+        </div>
+        <div class="grid grid-cols-2 gap-4 text-sm mb-6">
+            <div><strong>Date:</strong> <span id="pDate"></span></div>
+            <div><strong>Language:</strong> <span id="pLang"></span></div>
+            <div><strong>Exam Standard Duration:</strong> <span id="pDuration"></span> Minutes</div>
+            <div><strong>Backspace Mode:</strong> <span id="pBackspace"></span></div>
+        </div>
+
+        <table class="w-full border-collapse border border-black text-sm mb-6">
+            <thead>
+                <tr class="bg-gray-100">
+                    <th class="border border-black p-2 text-left">Evaluation Parameter</th>
+                    <th class="border border-black p-2 text-right">Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td class="border border-black p-2">Total Keystrokes / Strokes Typed</td><td id="pStrokes" class="border border-black p-2 text-right">0</td></tr>
+                <tr><td class="border border-black p-2">Gross Words (Strokes / 5)</td><td id="pGrossWords" class="border border-black p-2 text-right">0</td></tr>
+                <tr><td class="border border-black p-2">Total Errors Committed</td><td id="pErrors" class="border border-black p-2 text-right">0</td></tr>
+                <tr><td class="border border-black p-2">Admissible Errors (5% of Gross Words)</td><td id="pAdmissible" class="border border-black p-2 text-right">0</td></tr>
+                <tr><td class="border border-black p-2">Extra Penalty Errors</td><td id="pExtraErrors" class="border border-black p-2 text-right">0</td></tr>
+                <tr><td class="border border-black p-2">Penalty Words Deducted (Extra Errors × 2)</td><td id="pPenaltyWords" class="border border-black p-2 text-right">0</td></tr>
+                <tr><td class="border border-black p-2 font-bold">Net Speed (WPM)</td><td id="pNetWpm" class="border border-black p-2 text-right font-bold">0 WPM</td></tr>
+                <tr><td class="border border-black p-2 font-bold">Final Status</td><td id="pStatus" class="border border-black p-2 text-right font-bold">--</td></tr>
+            </tbody>
+        </table>
+
+        <div class="mt-12 flex justify-between text-xs pt-8 border-t border-gray-400">
+            <div>Candidate Signature</div>
+            <div>Invigilator Signature</div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 border-t border-slate-800 py-3 text-center text-xs text-slate-500 no-print">
+        HPRCA JOA (IT) Typing Exam Simulator &copy; 2026 | Self-Hosted Open-Source Practice Tool
+    </footer>
+
+    <script>
+        // Official Preset Passages
+        const PASSAGES = {
+            en: [
+                `Himachal Pradesh was crafted out of thirty princely states in nineteen forty eight as a Chief Commissioners province. Later on in nineteen seventy one Himachal Pradesh emerged as the eighteenth state of the Indian Union. The state is renowned for its natural beauty, rich cultural heritage, and robust administrative machinery. Information Technology has played a pivotal role in modernizing government services across all districts including Shimla, Mandi, and Kangra. Modern digital governance initiatives ensure seamless delivery of public services to remote agrarian communities. Technical proficiency in office automation and computer typing remains essential for junior office assistants serving across public departments.`,
+                
+                `Computers process data using electronic circuits executing preprogrammed instructions. Central processing units contain arithmetic logic units and control units that synchronize computational activities. Random access memory provides volatile primary storage whereas solid state drives provide durable nonvolatile secondary storage. Operating systems manage system hardware resources and facilitate human computer interaction through graphical interfaces. Networking protocols like TCP IP facilitate secure communication across local area networks and global internet infrastructure. Database management software enables structured storage, rapid querying, and retrieval of municipal records.`,
+
+                `Digital Transformation in governance emphasizes citizen centric service delivery through web applications and e-governance platforms. Himachal Pradesh administrative services have integrated digital land record portals, online public grievance redressal systems, and computerized recruitment boards. Technical staff must possess accurate keyboards skills, systematic data handling abilities, and familiarity with cyber security protocols. Rapid typing speeds with minimal errors ensure rapid processing of official files, legislative drafts, and administrative notifications across government secretariats.`
+            ],
+            hi: [
+                `हिमाचल प्रदेश का गठन पंद्रह अप्रैल उन्नीस सौ अड़तालीस को किया गया था। यह राज्य अपनी प्राकृतिक सुंदरता, पर्वतीय संस्कृति और प्रशासनिक दक्षता के लिए जाना जाता है। सरकारी कार्यालयों में सूचना प्रौद्योगिकी के बढ़ते उपयोग ने कार्यप्रणाली को सरल और पारदर्शी बनाया है। कनिष्ठ कार्यालय सहायक के पद हेतु कंप्यूटर टंकण परीक्षा में गति और सटीकता का होना अत्यंत आवश्यक है।`,
+
+                `कंप्यूटर एक इलेक्ट्रॉनिक उपकरण है जो डेटा को संसाधित कर उपयोगी सूचना में परिवर्तित करता है। मुख्य प्रोसेसर, स्मृति और इनपुट आउटपुट उपकरण इसके प्रमुख घटक हैं। डिजिटल भारत अभियान के तहत हिमाचल प्रदेश के दूरदराज क्षेत्रों में भी ई-सेवाएं पहुंचाई जा रही हैं। कार्यालयों में हिंदी और अंग्रेजी टंकण की जानकारी होना प्रशासनिक कार्यों के निष्पादन के लिए अनिवार्य है।`
+            ]
+        };
+
+        // State variables
+        let currentLang = 'en';
+        let currentPassageText = '';
+        let timer = null;
+        let timeRemaining = 600; // 10 minutes
+        let isRunning = false;
+        let audioEnabled = true;
+
+        // Audio Context Setup
+        let audioCtx = null;
+
+        function playClickSound() {
+            if (!audioEnabled) return;
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.04);
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.04);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.04);
+            } catch (e) {}
+        }
+
+        function toggleAudio() {
+            audioEnabled = !audioEnabled;
+            document.getElementById('soundToggle').innerText = audioEnabled ? '🔊 Audio On' : '🔇 Audio Off';
+        }
+
+        function changeLanguage() {
+            currentLang = document.getElementById('langSelect').value;
+            const badge = document.getElementById('benchmark-badge');
+            
+            if (currentLang === 'hi') {
+                badge.innerText = 'Target: 25 WPM (Hindi)';
+            } else {
+                badge.innerText = 'Target: 30 WPM (English)';
+            }
+
+            // Populate passage dropdown based on language
+            const passageSelect = document.getElementById('passageSelect');
+            passageSelect.innerHTML = '';
+            PASSAGES[currentLang].forEach((p, idx) => {
+                const opt = document.createElement('option');
+                opt.value = idx;
+                opt.innerText = `Passage ${idx + 1}`;
+                passageSelect.appendChild(opt);
+            });
+            const customOpt = document.createElement('option');
+            customOpt.value = 'custom';
+            customOpt.innerText = '-- Custom Text --';
+            passageSelect.appendChild(customOpt);
+
+            resetTest();
+        }
+
+        function loadPresetPassage() {
+            const val = document.getElementById('passageSelect').value;
+            const customContainer = document.getElementById('customTextContainer');
+            
+            if (val === 'custom') {
+                customContainer.classList.remove('hidden');
+            } else {
+                customContainer.classList.add('hidden');
+                currentPassageText = PASSAGES[currentLang][parseInt(val)];
+                renderSourceText();
+            }
+        }
+
+        function applyCustomText() {
+            const txt = document.getElementById('customTextInput').value.trim();
+            if (txt) {
+                currentPassageText = txt;
+                renderSourceText();
+                document.getElementById('customTextContainer').classList.add('hidden');
+            }
+        }
+
+        function renderSourceText() {
+            const container = document.getElementById('sourceTextContainer');
+            container.innerHTML = '';
+            
+            for (let i = 0; i < currentPassageText.length; i++) {
+                const span = document.createElement('span');
+                span.id = `char-${i}`;
+                span.innerText = currentPassageText[i];
+                if (i === 0) span.className = 'current';
+                container.appendChild(span);
+            }
+
+            document.getElementById('charCountLabel').innerText = `0 / ${currentPassageText.length} Chars`;
+        }
+
+        function startTestManual() {
+            if (isRunning) return;
+            resetTest();
+            document.getElementById('typingInput').disabled = false;
+            document.getElementById('typingInput').focus();
+            startTimer();
+        }
+
+        function startTimer() {
+            if (isRunning) return;
+            isRunning = true;
+            document.getElementById('typingStatusLabel').innerText = "Exam in Progress...";
+            document.getElementById('typingStatusLabel').className = "text-xs text-yellow-400 font-semibold animate-pulse";
+
+            const selectedMinutes = parseFloat(document.getElementById('durationSelect').value);
+            timeRemaining = selectedMinutes * 60;
+
+            timer = setInterval(() => {
+                timeRemaining--;
+                updateTimerDisplay();
+
+                if (timeRemaining <= 0) {
+                    finishExam();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const mins = Math.floor(timeRemaining / 60);
+            const secs = timeRemaining % 60;
+            document.getElementById('timerDisplay').innerText = 
+                `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        function resetTest() {
+            clearInterval(timer);
+            isRunning = false;
+            
+            const selectedMinutes = parseFloat(document.getElementById('durationSelect').value);
+            timeRemaining = selectedMinutes * 60;
+            updateTimerDisplay();
+
+            const input = document.getElementById('typingInput');
+            input.value = '';
+            input.disabled = false;
+
+            document.getElementById('strokeDisplay').innerText = '0';
+            document.getElementById('grossWpmDisplay').innerText = '0';
+            document.getElementById('errorDisplay').innerText = '0';
+            document.getElementById('accuracyDisplay').innerText = '100%';
+            document.getElementById('resultCard').classList.add('hidden');
+            document.getElementById('print-btn-top').classList.add('hidden');
+
+            document.getElementById('typingStatusLabel').innerText = "Ready - Start typing to begin";
+            document.getElementById('typingStatusLabel').className = "text-xs text-emerald-400 font-semibold";
+
+            loadPresetPassage();
+        }
+
+        // Real-time typing engine & key handling
+        document.getElementById('typingInput').addEventListener('input', function(e) {
+            if (!isRunning && this.value.length > 0) {
+                startTimer();
+            }
+
+            playClickSound();
+
+            const typedVal = this.value;
+            const backspaceMode = document.getElementById('backspaceSelect').value;
+
+            // Handle strict backspace block
+            if (backspaceMode === 'disabled' && e.inputType === 'deleteContentBackward') {
+                // Prevent deletion by restoring character if attempted
+            }
+
+            let strokes = typedVal.length;
+            let errors = 0;
+
+            const charSpans = document.querySelectorAll('#sourceTextContainer span');
+
+            charSpans.forEach((span, idx) => {
+                span.className = '';
+
+                if (idx < typedVal.length) {
+                    if (typedVal[idx] === currentPassageText[idx]) {
+                        span.className = 'correct';
+                    } else {
+                        span.className = 'incorrect';
+                        errors++;
+                    }
+                } else if (idx === typedVal.length) {
+                    span.className = 'current';
+
+                    // Auto scroll source container
+                    span.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            });
+
+            // Update Real-time Metrics
+            document.getElementById('strokeDisplay').innerText = strokes;
+            document.getElementById('errorDisplay').innerText = errors;
+
+            const timeElapsedMin = ((parseFloat(document.getElementById('durationSelect').value) * 60) - timeRemaining) / 60;
+            const grossWords = strokes / 5;
+            const grossWpm = timeElapsedMin > 0 ? Math.round(grossWords / timeElapsedMin) : 0;
+            document.getElementById('grossWpmDisplay').innerText = grossWpm;
+
+            const accuracy = strokes > 0 ? Math.max(0, Math.round(((strokes - errors) / strokes) * 100)) : 100;
+            document.getElementById('accuracyDisplay').innerText = `${accuracy}%`;
+
+            document.getElementById('charCountLabel').innerText = `${typedVal.length} / ${currentPassageText.length} Chars`;
+
+            // Auto finish if passage completed
+            if (typedVal.length >= currentPassageText.length) {
+                finishExam();
+            }
+        });
+
+        // Disable Backspace key physically in strict mode
+        document.getElementById('typingInput').addEventListener('keydown', function(e) {
+            const backspaceMode = document.getElementById('backspaceSelect').value;
+            if (backspaceMode === 'disabled' && e.key === 'Backspace') {
+                e.preventDefault();
+            }
+        });
+
+        function finishExam() {
+            clearInterval(timer);
+            isRunning = false;
+
+            const input = document.getElementById('typingInput');
+            input.disabled = true;
+
+            document.getElementById('typingStatusLabel').innerText = "Exam Completed!";
+            document.getElementById('typingStatusLabel').className = "text-xs text-blue-400 font-bold";
+
+            const typedVal = input.value;
+            const totalStrokes = typedVal.length;
+            const durationMin = parseFloat(document.getElementById('durationSelect').value);
+
+            let totalErrors = 0;
+            for (let i = 0; i < typedVal.length; i++) {
+                if (typedVal[i] !== currentPassageText[i]) {
+                    totalErrors++;
+                }
+            }
+
+            // Un-typed remaining characters are counted as errors
+            if (typedVal.length < currentPassageText.length) {
+                totalErrors += (currentPassageText.length - typedVal.length);
+            }
+
+            // HPRCA Formula Calculations
+            const grossWords = totalStrokes / 5;
+            const admissibleErrors = grossWords * 0.05; // 5% allowed
+            const extraErrors = Math.max(0, totalErrors - admissibleErrors);
+            const penaltyWords = extraErrors * 2;
+            const netWords = Math.max(0, grossWords - penaltyWords);
+            const netWpm = Math.round(netWords / durationMin);
+
+            const benchmark = currentLang === 'en' ? 30 : 25;
+            const passed = netWpm >= benchmark;
+
+            // Render Evaluation Screen
+            document.getElementById('resStrokes').innerText = totalStrokes;
+            document.getElementById('resGrossWords').innerText = grossWords.toFixed(1);
+            document.getElementById('resErrors').innerText = totalErrors;
+            document.getElementById('resAdmissible').innerText = admissibleErrors.toFixed(1);
+            document.getElementById('resExtraErrors').innerText = extraErrors.toFixed(1);
+            document.getElementById('resPenalty').innerText = penaltyWords.toFixed(1);
+            document.getElementById('resNetWords').innerText = netWords.toFixed(1);
+            document.getElementById('resNetWpm').innerText = `${netWpm} WPM`;
+
+            const badge = document.getElementById('statusBadge');
+            if (passed) {
+                badge.innerText = "PASSED";
+                badge.className = "px-4 py-2 rounded-lg text-lg font-bold tracking-wide uppercase bg-emerald-900/60 text-emerald-300 border border-emerald-500/50";
+            } else {
+                badge.innerText = "FAILED";
+                badge.className = "px-4 py-2 rounded-lg text-lg font-bold tracking-wide uppercase bg-red-900/60 text-red-300 border border-red-500/50";
+            }
+
+            document.getElementById('resultCard').classList.remove('hidden');
+            document.getElementById('print-btn-top').classList.remove('hidden');
+
+            // Populate printable slip
+            document.getElementById('pDate').innerText = new Date().toLocaleString();
+            document.getElementById('pLang').innerText = currentLang === 'en' ? 'English' : 'Hindi';
+            document.getElementById('pDuration').innerText = durationMin;
+            document.getElementById('pBackspace').innerText = document.getElementById('backspaceSelect').value === 'disabled' ? 'Disabled' : 'Enabled';
+            document.getElementById('pStrokes').innerText = totalStrokes;
+            document.getElementById('pGrossWords').innerText = grossWords.toFixed(1);
+            document.getElementById('pErrors').innerText = totalErrors;
+            document.getElementById('pAdmissible').innerText = admissibleErrors.toFixed(1);
+            document.getElementById('pExtraErrors').innerText = extraErrors.toFixed(1);
+            document.getElementById('pPenaltyWords').innerText = penaltyWords.toFixed(1);
+            document.getElementById('pNetWpm').innerText = `${netWpm} WPM`;
+            document.getElementById('pStatus').innerText = passed ? 'QUALIFIED (PASS)' : 'NOT QUALIFIED (FAIL)';
+        }
+
+        function downloadTxtResult() {
+            let txt = "===========================================\n";
+            txt += "    HPRCA JOA (IT) TYPING EVALUATION SLIP   \n";
+            txt += "===========================================\n";
+            txt += `Date/Time          : ${new Date().toLocaleString()}\n`;
+            txt += `Language           : ${currentLang.toUpperCase()}\n`;
+            txt += `Target Benchmark   : ${currentLang === 'en' ? '30 WPM' : '25 WPM'}\n`;
+            txt += `-------------------------------------------\n`;
+            txt += `Total Key Strokes  : ${document.getElementById('resStrokes').innerText}\n`;
+            txt += `Gross Words        : ${document.getElementById('resGrossWords').innerText}\n`;
+            txt += `Total Errors       : ${document.getElementById('resErrors').innerText}\n`;
+            txt += `Admissible Errors  : ${document.getElementById('resAdmissible').innerText}\n`;
+            txt += `Extra Errors       : ${document.getElementById('resExtraErrors').innerText}\n`;
+            txt += `Penalty Words      : ${document.getElementById('resPenalty').innerText}\n`;
+            txt += `Net Words          : ${document.getElementById('resNetWords').innerText}\n`;
+            txt += `FINAL NET SPEED    : ${document.getElementById('resNetWpm').innerText}\n`;
+            txt += `RESULT STATUS      : ${document.getElementById('statusBadge').innerText}\n`;
+            txt += "===========================================\n";
+
+            const blob = new Blob([txt], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `HPRCA_Typing_Scorecard_${Date.now()}.txt`;
+            a.click();
+        }
+
+        function openPrintSlip() {
+            window.print();
+        }
+
+        // Initialize default view
+        changeLanguage();
+    </script>
+</body>
+</html>
+```
